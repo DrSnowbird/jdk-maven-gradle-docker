@@ -11,7 +11,7 @@ ORGANIZATION=openkbs
 DOCKER_IMAGE_REPO=`echo $(basename $PWD)|tr '[:upper:]' '[:lower:]'|tr "/: " "_" `
 imageTag=${1:-"${ORGANIZATION}/${DOCKER_IMAGE_REPO}"}
 
-instanceName=some-jdk-mvn-py3
+instanceName=some-jdk-maven-gradle-docker
 function cleanup() {
     if [ ! "`docker ps -a|grep ${instanceName}`" == "" ]; then
          docker rm -f ${instanceName}

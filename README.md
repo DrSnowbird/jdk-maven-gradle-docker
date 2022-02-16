@@ -1,6 +1,6 @@
-# OpenJDK Java 11 + Maven 3.8 + Gradle 7
+# OpenJDK Java 11 + Maven 3 + Gradle 7
 
-[![](https://images.microbadger.com/badges/image/openkbs/jdk-mvn-py3.svg)](https://microbadger.com/images/openkbs/jdk-mvn-py3 "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/version/openkbs/jdk-mvn-py3.svg)](https://microbadger.com/images/openkbs/jdk-mvn-py3 "Get your own version badge on microbadger.com")
+[![](https://images.microbadger.com/badges/image/openkbs/jdk-maven-gradle-docker.svg)](https://microbadger.com/images/openkbs/jdk-maven-gradle-docker "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/version/openkbs/jdk-maven-gradle-docker.svg)](https://microbadger.com/images/openkbs/jdk-maven-gradle-docker "Get your own version badge on microbadger.com")
 
 # ** This build is based upon Ubuntu 20.04 + OpenJDK Java 11 (default - changeable by you) **
 
@@ -29,13 +29,13 @@ After that, combining with other Docker security practice (see below references)
 # Components
 * Ubuntu 20.04 LTS now as LTS Docker base image.
 
-* openjdk version "11.0.11" 2021-04-20
-  OpenJDK Runtime Environment (build 11.0.11+9-Ubuntu-0ubuntu2.20.04)
-  OpenJDK 64-Bit Server VM (build 11.0.11+9-Ubuntu-0ubuntu2.20.04, mixed mode, sharing)
-* Apache Maven 3.8
-* Gradle 7
+* openjdk version "11.0.13" 2021-10-19
+  OpenJDK Runtime Environment (build 11.0.13+8-Ubuntu-0ubuntu1.20.04)
+  OpenJDK 64-Bit Server VM (build 11.0.13+8-Ubuntu-0ubuntu1.20.04, mixed mode, sharing)
+* Apache Maven 3.8+
+* Gradle 7.4+
 * Other tools: git wget unzip vim python python-setuptools python-dev python-numpy, ..., etc.
-* [See Releases Information](https://github.com/DrSnowbird/jdk-mvn-py3/blob/master/README.md#Releases-information)
+* [See Releases Information](https://github.com/DrSnowbird/jdk-maven-gradle-docker/blob/master/README.md#Releases-information)
 
 # Quick commands
 * build.sh - build local image
@@ -46,8 +46,8 @@ After that, combining with other Docker security practice (see below references)
 * tryJava.sh : test Java
 
 # How to use and quick start running?
-1. git clone https://github.com/DrSnowbird/jdk-mvn-py3.git
-2. cd jdk-mvn-py3
+1. git clone https://github.com/DrSnowbird/jdk-maven-gradle-docker.git
+2. cd jdk-maven-gradle-docker
 3. ./run.sh
 
 # Default Run (test) - Just entering Container
@@ -68,13 +68,13 @@ After that, combining with other Docker security practice (see below references)
 # Pull the image from Docker Repository
 
 ```bash
-docker pull openkbs/jdk-mvn-py3
+docker pull openkbs/jdk-maven-gradle-docker
 ```
 
 # Base the image to build add-on components
 
 ```Dockerfile
-FROM openkbs/jdk-mvn-py3
+FROM openkbs/jdk-maven-gradle-docker
 ... (then your customization Dockerfile code here)
 ```
 
@@ -85,27 +85,27 @@ Then, you're ready to run:
 
 ```bash
 mkdir ./data
-docker run -d --name my-jdk-mvn-py3 -v $PWD/data:/data -i -t openkbs/jdk-mvn-py3
+docker run -d --name my-jdk-maven-gradle-docker -v $PWD/data:/data -i -t openkbs/jdk-maven-gradle-docker
 ```
 
 # Build and Run your own image
-Say, you will build the image "my/jdk-mvn-py3".
+Say, you will build the image "my/jdk-maven-gradle-docker".
 
 ```bash
-docker build -t my/jdk-mvn-py3 .
+docker build -t my/jdk-maven-gradle-docker .
 ```
 
-To run your own image, say, with some-jdk-mvn-py3:
+To run your own image, say, with some-jdk-maven-gradle-docker:
 
 ```bash
 mkdir ./data
-docker run -d --name some-jdk-mvn-py3 -v $PWD/data:/data -i -t my/jdk-mvn-py3
+docker run -d --name some-jdk-maven-gradle-docker -v $PWD/data:/data -i -t my/jdk-maven-gradle-docker
 ```
 
 # Shell into the Docker instance
 
 ```bash
-docker exec -it some-jdk-mvn-py3 /bin/bash
+docker exec -it some-jdk-maven-gradle-docker /bin/bash
 ```
 
 
@@ -125,8 +125,8 @@ public class HelloWorld {
 }
 EOF
 cat ./data/HelloWorld.java
-alias djavac='docker run -it --rm --name some-jdk-mvn-py3 -v '$PWD'/data:/data openkbs/jdk-mvn-py3 javac'
-alias djava='docker run -it --rm --name some-jdk-mvn-py3 -v '$PWD'/data:/data openkbs/jdk-mvn-py3 java'
+alias djavac='docker run -it --rm --name some-jdk-maven-gradle-docker -v '$PWD'/data:/data openkbs/jdk-maven-gradle-docker javac'
+alias djava='docker run -it --rm --name some-jdk-maven-gradle-docker -v '$PWD'/data:/data openkbs/jdk-maven-gradle-docker java'
 djavac HelloWorld.java
 djava HelloWorld
 ```
