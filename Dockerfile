@@ -7,38 +7,33 @@ ENV DEBIAN_FRONTEND noninteractive
 
 ENV JAVA_VERSION=11
 
+##################################
+#### ---- Tools: setup   ---- ####
+##################################
+ENV LANG C.UTF-8
+
+ARG LIB_DEV_LIST="apt-utils" # automake pkg-config libpcre3-dev zlib1g-dev liblzma-dev
+ARG LIB_BASIC_LIST="curl wget unzip ca-certificates" # iputils-ping nmap net-tools build-essential software-properties-common apt-transport-https
+ARG LIB_COMMON_LIST="sudo bzip2 git xz-utils vim xz-utils net-tools"
+ARG LIB_TOOL_LIST="graphviz libsqlite3-dev sqlite3"
+
+RUN set -eux; \
+    apt-get update -y && \
+    apt-get install -y --no-install-recommends ${LIB_DEV_LIST} && \
+    apt-get install -y --no-install-recommends ${LIB_BASIC_LIST} && \
+    apt-get install -y --no-install-recommends ${LIB_COMMON_LIST} && \
+    apt-get install -y --no-install-recommends ${LIB_TOOL_LIST} && \
+    apt-get install -y sudo && \
+    apt-get clean -y && apt-get autoremove && \
+    rm -rf /var/lib/apt/lists/* && \
+    echo "vm.max_map_count=262144" | tee -a /etc/sysctl.conf
+
 ##############################################
 #### ---- Installation Directories   ---- ####
 ##############################################
 ENV INSTALL_DIR=${INSTALL_DIR:-/usr}
 ENV SCRIPT_DIR=${SCRIPT_DIR:-$INSTALL_DIR/scripts}
 
-##############################################
-#### ---- Corporate Proxy Auto Setup ---- ####
-##############################################
-#### ---- Transfer setup ---- ####
-COPY ./scripts ${SCRIPT_DIR}
-RUN chmod +x ${SCRIPT_DIR}/*.sh
-
-#### ---- Apt Proxy & NPM Proxy & NPM Permission setup if detected: ---- ####
-#RUN cd ${SCRIPT_DIR}; ${SCRIPT_DIR}/setup_system_proxy.sh
-
-########################################
-#### update ubuntu and Install Python 3
-########################################
-ARG LIB_DEV_LIST="apt-utils automake pkg-config libpcre3-dev zlib1g-dev liblzma-dev"
-ARG LIB_BASIC_LIST="curl iputils-ping nmap net-tools build-essential software-properties-common apt-transport-https"
-ARG LIB_COMMON_LIST="bzip2 libbz2-dev git wget unzip vim "
-ARG LIB_TOOL_LIST="graphviz libsqlite3-dev sqlite3 git xz-utils"
-
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends ${LIB_DEV_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_BASIC_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_COMMON_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_TOOL_LIST} && \
-    apt-get install -y sudo && \
-    apt-get clean -y && \
-    rm -rf /var/lib/apt/lists/*
 
 ########################################
 #### ------- OpenJDK Installation ------
@@ -92,20 +87,32 @@ RUN apt-get update -y && \
 RUN update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
 	update-alternatives --query java | grep -q 'Status: manual'
 
+############################################
+##### ---- System: certificates : ---- #####
+##### ---- Corporate Proxy      : ---- #####
+############################################
+COPY ./scripts ${SCRIPT_DIR}
+COPY certificates /certificates
+RUN ${SCRIPT_DIR}/setup_system_certificates.sh
+RUN ${SCRIPT_DIR}/setup_system_proxy.sh
+
 ###################################
 #### ---- Install Maven 3 ---- ####
 ###################################
-ARG MAVEN_VERSION=${MAVEN_VERSION:-3.8.4}
-ENV MAVEN_VERSION=${MAVEN_VERSION}
+ENV MAVEN_VERSION=${MAVEN_VERSION:-3.8.5}
 ENV MAVEN_HOME=/usr/apache-maven-${MAVEN_VERSION}
+ARG MAVEN_PACKAGE=apache-maven-${MAVEN_VERSION}-bin.tar.gz
 ENV PATH=${PATH}:${MAVEN_HOME}/bin
-# curl -sL http://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
-RUN export MAVEN_PACKAGE_URL=$(curl -s -k https://maven.apache.org/download.cgi | grep "apache-maven.*bin.tar.gz" | head -1|cut -d'"' -f2) && \
-    MAVEN_VERSION=$(curl -s -k https://maven.apache.org/download.cgi | grep "apache-maven.*bin.tar.gz" | head -1|cut -d'"' -f2|cut -d'/' -f6) && \
+# https://dlcdn.apache.org/maven/maven-3/3.8.5/binaries/apache-maven-3.8.5-bin.tar.gz
+RUN export MAVEN_PACKAGE_URL=$(curl -s https://maven.apache.org/download.cgi | grep -e "apache-maven.*bin.tar.gz" | head -1|cut -d'"' -f2) && \
+    export MAVEN_VERSION=$(echo ${MAVEN_PACKAGE_URL}| cut -d'/' -f6) && \
     export MAVEN_HOME=/usr/apache-maven-${MAVEN_VERSION} && \
-    curl -sL ${MAVEN_PACKAGE_URL} | gunzip | tar x -C /usr/ && \
-    ln -s ${MAVEN_HOME} /usr/maven
-    
+    export MAVEN_PACKAGE=apache-maven-${MAVEN_VERSION}-bin.tar.gz && \
+    export PATH=${PATH}:${MAVEN_HOME}/bin && \
+    curl -k -sL ${MAVEN_PACKAGE_URL} | gunzip | tar x -C /usr/ && \
+    ln -s ${MAVEN_HOME}/bin/mvn /usr/bin/mvn && \
+    ${MAVEN_HOME}/bin/mvn -v && \
+    rm -f ${MAVEN_PACKAGE}
 
 ###################################
 #### ---- Install Gradle ---- #####
@@ -113,20 +120,20 @@ RUN export MAVEN_PACKAGE_URL=$(curl -s -k https://maven.apache.org/download.cgi 
 # Ref: https://gradle.org/releases/
 
 ENV GRADLE_INSTALL_BASE=${GRADLE_INSTALL_BASE:-/opt/gradle}
-ENV GRADLE_VERSION=${GRADLE_VERSION:-7.4}
+ENV GRADLE_VERSION=${GRADLE_VERSION:-7.4.1}
 ENV GRADLE_HOME=${GRADLE_INSTALL_BASE}/gradle-${GRADLE_VERSION}
 ENV GRADLE_PACKAGE=gradle-${GRADLE_VERSION}-bin.zip
 ENV GRADLE_PACKAGE_URL=https://services.gradle.org/distributions/${GRADLE_PACKAGE}
 
 RUN mkdir -p ${GRADLE_INSTALL_BASE} && \
     cd ${GRADLE_INSTALL_BASE} && \
-    export GRADLE_VERSION=$(curl -s -k https://gradle.org/releases/ | grep "Download: " | head -1 | cut -d'-' -f2) && \
+    export GRADLE_PACKAGE_URL=$(curl -k -s https://gradle.org/releases/ | grep "Download: " | head -1 | cut -d'"' -f4) && \
+    export GRADLE_VERSION=$(curl -k -s https://gradle.org/releases/ | grep "Download: " | head -1 | cut -d'-' -f2) && \
     export GRADLE_HOME=${GRADLE_INSTALL_BASE}/gradle-${GRADLE_VERSION} && \
-    export GRADLE_PACKAGE_URL=$(curl -s -k https://gradle.org/releases/ | grep "Download: " | head -1 | cut -d'"' -f4) && \
     export GRADLE_PACKAGE=gradle-${GRADLE_VERSION}-bin.zip && \
     wget -q --no-check-certificate -c ${GRADLE_PACKAGE_URL} && \
     unzip -d ${GRADLE_INSTALL_BASE} ${GRADLE_PACKAGE} && \
-    ls -al ${GRADLE_HOME} && \
+    find ${GRADLE_INSTALL_BASE} && \
     ln -s ${GRADLE_HOME}/bin/gradle /usr/bin/gradle && \
     ${GRADLE_HOME}/bin/gradle -v && \
     rm -f ${GRADLE_PACKAGE}
