@@ -17,7 +17,7 @@ function usage() {
 #### ---- Usage ---- ####
 ORIG_ARGS="$*"
 SHORT="hd:i:"
-LONG="help,certificates_dir:"
+LONG="help,certificates_dir:,certificates_install_dir:"
 
 # $@ is all command line parameters passed to the script.
 # -o is for short options like -v
@@ -252,7 +252,7 @@ function setupSystemCertificates() {
         env | grep -i java
         sudo cat /etc/ca-certificates/update.d/docker-openjdk
     fi
-    sudo ls -al  ${SOURCE_CERTIFICATES_DIR}/*
+    $sudo ls -al  ${SOURCE_CERTIFICATES_DIR}/*
     echo -e ">>> ------------------------------"
     echo -e ">>> ------------------------------"
     echo -e ">>> /certificates: ${CERT_FILES}"

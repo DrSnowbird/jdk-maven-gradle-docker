@@ -11,28 +11,32 @@ ENV JAVA_VERSION=11
 #### ---- Tools: setup   ---- ####
 ##################################
 ENV LANG C.UTF-8
-
-ARG LIB_DEV_LIST="apt-utils" # automake pkg-config libpcre3-dev zlib1g-dev liblzma-dev
-ARG LIB_BASIC_LIST="curl wget unzip ca-certificates" # iputils-ping nmap net-tools build-essential software-properties-common apt-transport-https
-ARG LIB_COMMON_LIST="sudo bzip2 git xz-utils vim xz-utils net-tools"
-ARG LIB_TOOL_LIST="graphviz libsqlite3-dev sqlite3"
+ARG LIB_DEV_LIST="apt-utils"
+ARG LIB_BASIC_LIST="curl wget unzip ca-certificates"
+ARG LIB_COMMON_LIST="sudo bzip2 git xz-utils unzip vim net-tools"
+ARG LIB_TOOL_LIST="graphviz"
 
 RUN set -eux; \
     apt-get update -y && \
-    apt-get install -y --no-install-recommends ${LIB_DEV_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_BASIC_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_COMMON_LIST} && \
-    apt-get install -y --no-install-recommends ${LIB_TOOL_LIST} && \
-    apt-get install -y sudo && \
+    apt-get install -y --no-install-recommends ${LIB_DEV_LIST}  ${LIB_BASIC_LIST}  ${LIB_COMMON_LIST} ${LIB_TOOL_LIST} && \
     apt-get clean -y && apt-get autoremove && \
     rm -rf /var/lib/apt/lists/* && \
     echo "vm.max_map_count=262144" | tee -a /etc/sysctl.conf
-
+    
 ##############################################
 #### ---- Installation Directories   ---- ####
 ##############################################
 ENV INSTALL_DIR=${INSTALL_DIR:-/usr}
 ENV SCRIPT_DIR=${SCRIPT_DIR:-$INSTALL_DIR/scripts}
+
+############################################
+##### ---- System: certificates : ---- #####
+##### ---- Corporate Proxy      : ---- #####
+############################################
+COPY ./scripts ${SCRIPT_DIR}
+COPY certificates /certificates
+RUN ${SCRIPT_DIR}/setup_system_certificates.sh
+RUN ${SCRIPT_DIR}/setup_system_proxy.sh
 
 
 ########################################
@@ -51,15 +55,6 @@ RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* 
 #
 #     For some sample build times, see Debian's buildd logs:
 #       https://buildd.debian.org/status/logs.php?pkg=openjdk-8
-
-#RUN apt-get update && apt-get install -y --no-install-recommends \
-#		bzip2 \
-#		unzip \
-#		xz-utils \
-#	&& rm -rf /var/lib/apt/lists/*
-
-# Default to UTF-8 file.encoding
-ENV LANG C.UTF-8
 
 ENV JAVA_HOME=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
@@ -86,15 +81,6 @@ RUN apt-get update -y && \
 # ------------------------------------------------------------------------------------------------
 RUN update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
 	update-alternatives --query java | grep -q 'Status: manual'
-
-############################################
-##### ---- System: certificates : ---- #####
-##### ---- Corporate Proxy      : ---- #####
-############################################
-COPY ./scripts ${SCRIPT_DIR}
-COPY certificates /certificates
-RUN ${SCRIPT_DIR}/setup_system_certificates.sh
-RUN ${SCRIPT_DIR}/setup_system_proxy.sh
 
 ###################################
 #### ---- Install Maven 3 ---- ####
